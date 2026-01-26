@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procesador de Cobranza - Promocash</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); }
+        .card-glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .drop-zone { border: 2px dashed #475569; transition: all 0.3s; }
+        .drop-zone:hover, .drop-zone.dragover { border-color: #22d3ee; background: rgba(34,211,238,0.1); }
+        .file-ok { border-color: #10b981 !important; background: rgba(16,185,129,0.1) !important; }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white">
+    <div class="container mx-auto px-4 py-8 max-w-2xl">
+        
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold mb-2">📊 Procesador de Cobranza</h1>
+            <p class="text-cyan-400 font-semibold">PROMOCASH</p>
+        </div>
+
+        <div class="card-glass rounded-2xl p-6">
+            <h2 class="text-lg font-semibold mb-4">Sube los 3 archivos</h2>
+            
+            <form id="formUpload" enctype="multipart/form-data">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="drop-zone rounded-xl p-4 text-center cursor-pointer" id="dropMora" onclick="document.getElementById('fileMora').click()">
+                        <input type="file" name="mora" id="fileMora" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleFile(this, 'Mora')" required>
+                        <div class="text-3xl mb-1">📁</div>
+                        <p class="font-medium text-amber-400 text-sm">MORA</p>
+                        <p class="text-xs text-gray-400 mt-1" id="statusMora">Seleccionar</p>
+                    </div>
+                    
+                    <div class="drop-zone rounded-xl p-4 text-center cursor-pointer" id="dropVigente" onclick="document.getElementById('fileVigente').click()">
+                        <input type="file" name="vigente" id="fileVigente" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleFile(this, 'Vigente')" required>
+                        <div class="text-3xl mb-1">📁</div>
+                        <p class="font-medium text-violet-400 text-sm">VIGENTE</p>
+                        <p class="text-xs text-gray-400 mt-1" id="statusVigente">Seleccionar</p>
+                    </div>
+                    
+                    <div class="drop-zone rounded-xl p-4 text-center cursor-pointer" id="dropCobranza" onclick="document.getElementById('fileCobranza').click()">
+                        <input type="file" name="cobranza" id="fileCobranza" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleFile(this, 'Cobranza')" required>
+                        <div class="text-3xl mb-1">📁</div>
+                        <p class="font-medium text-emerald-400 text-sm">COBRANZA</p>
+                        <p class="text-xs text-gray-400 mt-1" id="statusCobranza">Seleccionar</p>
+                    </div>
+                </div>
+                
+                <button type="submit" id="btnProcesar"
+                    class="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-semibold disabled:opacity-50 hover:from-cyan-500 hover:to-blue-500 transition">
+                    🚀 Procesar y Generar Link
+                </button>
+            </form>
+
+            <div id="loading" class="hidden text-center py-4">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+                <p class="mt-2 text-gray-400">Procesando...</p>
+            </div>
+
+            <div id="resultado" class="hidden mt-6 p-4 bg-emerald-900/30 rounded-xl border border-emerald-500/30">
+                <p class="text-emerald-400 font-medium mb-2">✅ ¡Listo!</p>
+                <p class="text-sm text-gray-300 mb-3">Comparte este link:</p>
+                <div class="flex gap-2">
+                    <input type="text" id="linkGenerado" readonly class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm">
+                    <button onclick="copiarLink()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-sm font-medium">
+                        📋 Copiar
+                    </button>
+                </div>
+                <a id="linkIr" href="#" class="block mt-3 text-center py-2 bg-violet-600 hover:bg-violet-500 rounded-lg text-sm font-medium">
+                    👁️ Ver Reporte
+                </a>
+            </div>
+        </div>
+
+        <div class="text-center mt-6 text-gray-500 text-xs">
+            <p>Los reportes se guardan por 7 días</p>
+        </div>
+    </div>
+
+    <script>
+        // Drag & drop
+        ['Mora', 'Vigente', 'Cobranza'].forEach(tipo => {
+            const drop = document.getElementById('drop' + tipo);
+            drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+            drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+            drop.addEventListener('drop', e => {
+                e.preventDefault();
+                drop.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    const input = document.getElementById('file' + tipo);
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    input.files = dt.files;
+                    handleFile(input, tipo);
+                }
+            });
+        });
+
+        function handleFile(input, tipo) {
+            if (input.files[0]) {
+                document.getElementById('drop' + tipo).classList.add('file-ok');
+                document.getElementById('status' + tipo).textContent = '✓ ' + input.files[0].name.substring(0, 15);
+            }
+        }
+
+        document.getElementById('formUpload').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            
+            document.getElementById('btnProcesar').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('resultado').classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/procesar', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                if (data.success) {
+                    const url = window.location.origin + data.url;
+                    document.getElementById('linkGenerado').value = url;
+                    document.getElementById('linkIr').href = data.url;
+                    document.getElementById('resultado').classList.remove('hidden');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (err) {
+                alert('Error de conexión: ' + err.message);
+            }
+            
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('btnProcesar').classList.remove('hidden');
+        });
+
+        function copiarLink() {
+            const input = document.getElementById('linkGenerado');
+            input.select();
+            document.execCommand('copy');
+            alert('✓ Link copiado!');
+        }
+    </script>
+</body>
+</html>

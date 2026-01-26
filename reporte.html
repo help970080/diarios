@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Cobranza - Promocash</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); }
+        .card-glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white">
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
+        
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold mb-1">📊 Reporte de Cobranza</h1>
+            <p class="text-cyan-400 font-semibold">PROMOCASH</p>
+            <p class="text-gray-400 text-sm mt-1" id="fecha"></p>
+        </div>
+
+        <div id="loading" class="text-center py-20">
+            <div class="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-400"></div>
+            <p class="mt-3 text-gray-400">Cargando reporte...</p>
+        </div>
+
+        <div id="contenido" class="hidden">
+            <!-- KPIs -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                <div class="bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-xl p-4">
+                    <p class="text-emerald-200 text-xs">Total Cobrado</p>
+                    <p class="text-2xl font-bold" id="kpiMonto">$0</p>
+                </div>
+                <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl p-4">
+                    <p class="text-blue-200 text-xs">Cobertura</p>
+                    <p class="text-2xl font-bold" id="kpiCobertura">0%</p>
+                </div>
+                <div class="bg-gradient-to-br from-amber-600 to-orange-700 rounded-xl p-4">
+                    <p class="text-amber-200 text-xs">MORA</p>
+                    <p class="text-2xl font-bold" id="kpiMora">0%</p>
+                    <p class="text-amber-300 text-xs" id="kpiMoraDetalle"></p>
+                </div>
+                <div class="bg-gradient-to-br from-violet-600 to-purple-800 rounded-xl p-4">
+                    <p class="text-violet-200 text-xs">VIGENTE</p>
+                    <p class="text-2xl font-bold" id="kpiVigente">0%</p>
+                    <p class="text-violet-300 text-xs" id="kpiVigenteDetalle"></p>
+                </div>
+            </div>
+
+            <!-- Gráficos -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                <div class="card-glass rounded-xl p-4">
+                    <h3 class="text-sm font-semibold mb-2">📍 Por Agencia</h3>
+                    <div class="h-44"><canvas id="chartAgencias"></canvas></div>
+                </div>
+                <div class="card-glass rounded-xl p-4">
+                    <h3 class="text-sm font-semibold mb-2">📈 Distribución</h3>
+                    <div class="h-44"><canvas id="chartDona"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Tabla Agencias -->
+            <div class="card-glass rounded-xl p-4 mb-6">
+                <h3 class="text-sm font-semibold mb-2">🏢 Por Agencia</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs">
+                        <thead>
+                            <tr class="border-b border-gray-700">
+                                <th class="text-left p-2">Agencia</th>
+                                <th class="text-center p-2">Mora</th>
+                                <th class="text-center p-2">Vigente</th>
+                                <th class="text-center p-2">Total</th>
+                                <th class="text-center p-2">Cobrados</th>
+                                <th class="text-center p-2">%</th>
+                                <th class="text-right p-2">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaAgencias"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Descargas -->
+            <div class="card-glass rounded-xl p-4 mb-6">
+                <h3 class="text-sm font-semibold mb-2">📥 Descargar</h3>
+                <div class="grid grid-cols-3 gap-2">
+                    <a id="dlMora" class="py-2 px-3 bg-amber-600 hover:bg-amber-500 rounded-lg text-xs font-medium text-center">⬇️ Mora</a>
+                    <a id="dlVigente" class="py-2 px-3 bg-violet-600 hover:bg-violet-500 rounded-lg text-xs font-medium text-center">⬇️ Vigente</a>
+                    <a id="dlReporte" class="py-2 px-3 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-xs font-medium text-center">⬇️ Reporte</a>
+                </div>
+            </div>
+
+            <!-- Detalle -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="card-glass rounded-xl p-4">
+                    <h3 class="text-sm font-semibold mb-2">⚠️ MORA con Pago (<span id="countMora">0</span>)</h3>
+                    <div class="overflow-y-auto max-h-40 text-xs">
+                        <table class="w-full">
+                            <thead class="sticky top-0 bg-slate-800">
+                                <tr class="border-b border-gray-700">
+                                    <th class="text-left p-1">Cliente</th>
+                                    <th class="text-left p-1">Agencia</th>
+                                    <th class="text-right p-1">Cobrado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaMora"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-glass rounded-xl p-4">
+                    <h3 class="text-sm font-semibold mb-2">✅ VIGENTE con Pago (<span id="countVigente">0</span>)</h3>
+                    <div class="overflow-y-auto max-h-40 text-xs">
+                        <table class="w-full">
+                            <thead class="sticky top-0 bg-slate-800">
+                                <tr class="border-b border-gray-700">
+                                    <th class="text-left p-1">Cliente</th>
+                                    <th class="text-left p-1">Agencia</th>
+                                    <th class="text-right p-1">Cobrado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaVigente"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nuevo reporte -->
+            <a href="/" class="block mt-6 text-center py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-medium text-sm">
+                ➕ Crear nuevo reporte
+            </a>
+        </div>
+
+        <div id="error" class="hidden text-center py-20">
+            <p class="text-red-400 text-xl">❌ Reporte no encontrado</p>
+            <p class="text-gray-400 mt-2">El link puede haber expirado (7 días)</p>
+            <a href="/" class="inline-block mt-4 px-6 py-2 bg-cyan-600 rounded-lg">Crear nuevo reporte</a>
+        </div>
+
+        <div class="text-center mt-6 text-gray-500 text-xs">
+            <p>Promocash © 2026</p>
+        </div>
+    </div>
+
+    <script>
+        const id = window.location.pathname.split('/').pop();
+
+        fetch(`/api/reporte/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+                mostrar(data);
+            })
+            .catch(() => {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('error').classList.remove('hidden');
+            });
+
+        function mostrar(data) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('contenido').classList.remove('hidden');
+            
+            const r = data.datos.resumen;
+            document.getElementById('fecha').textContent = data.fecha;
+            
+            // KPIs
+            document.getElementById('kpiMonto').textContent = '$' + r.total.monto.toLocaleString();
+            document.getElementById('kpiCobertura').textContent = r.total.porcentaje + '%';
+            document.getElementById('kpiMora').textContent = r.mora.porcentaje + '%';
+            document.getElementById('kpiMoraDetalle').textContent = `${r.mora.cobrados}/${r.mora.total} • $${r.mora.monto.toLocaleString()}`;
+            document.getElementById('kpiVigente').textContent = r.vigente.porcentaje + '%';
+            document.getElementById('kpiVigenteDetalle').textContent = `${r.vigente.cobrados}/${r.vigente.total} • $${r.vigente.monto.toLocaleString()}`;
+
+            // Links descarga
+            document.getElementById('dlMora').href = `/api/descargar/${id}/mora`;
+            document.getElementById('dlVigente').href = `/api/descargar/${id}/vigente`;
+            document.getElementById('dlReporte').href = `/api/descargar/${id}/reporte`;
+
+            // Tabla agencias
+            const tabla = document.getElementById('tablaAgencias');
+            let totalM = 0, totalV = 0, totalC = 0, totalCob = 0, totalMonto = 0;
+            r.porAgencia.forEach(ag => {
+                const pctColor = ag.porcentaje >= 50 ? 'text-emerald-400' : ag.porcentaje >= 20 ? 'text-yellow-400' : 'text-red-400';
+                tabla.innerHTML += `<tr class="border-b border-gray-800">
+                    <td class="p-2">${ag.agencia}</td>
+                    <td class="p-2 text-center text-amber-400">${ag.mora}</td>
+                    <td class="p-2 text-center text-violet-400">${ag.vigente}</td>
+                    <td class="p-2 text-center">${ag.total}</td>
+                    <td class="p-2 text-center text-emerald-400">${ag.cobrados}</td>
+                    <td class="p-2 text-center ${pctColor}">${ag.porcentaje}%</td>
+                    <td class="p-2 text-right text-emerald-400">$${ag.monto.toLocaleString()}</td>
+                </tr>`;
+                totalM += ag.mora; totalV += ag.vigente; totalC += ag.total; totalCob += ag.cobrados; totalMonto += ag.monto;
+            });
+            tabla.innerHTML += `<tr class="border-t-2 border-cyan-500 font-bold bg-slate-800/50">
+                <td class="p-2">TOTAL</td>
+                <td class="p-2 text-center">${totalM}</td>
+                <td class="p-2 text-center">${totalV}</td>
+                <td class="p-2 text-center">${totalC}</td>
+                <td class="p-2 text-center text-emerald-400">${totalCob}</td>
+                <td class="p-2 text-center text-cyan-400">${r.total.porcentaje}%</td>
+                <td class="p-2 text-right text-emerald-400">$${totalMonto.toLocaleString()}</td>
+            </tr>`;
+
+            // Tablas detalle
+            document.getElementById('countMora').textContent = r.detalleMora.length;
+            document.getElementById('countVigente').textContent = r.detalleVigente.length;
+            
+            document.getElementById('tablaMora').innerHTML = r.detalleMora.map(c => 
+                `<tr class="border-b border-gray-800">
+                    <td class="p-1">${c.cliente}</td>
+                    <td class="p-1 text-amber-400">${c.agencia}</td>
+                    <td class="p-1 text-right text-emerald-400">$${c.cobranza.toLocaleString()}</td>
+                </tr>`).join('');
+
+            document.getElementById('tablaVigente').innerHTML = r.detalleVigente
+                .sort((a,b) => b.cobranza - a.cobranza)
+                .map(c => 
+                `<tr class="border-b border-gray-800">
+                    <td class="p-1">${c.cliente}</td>
+                    <td class="p-1 text-violet-400">${c.agencia}</td>
+                    <td class="p-1 text-right text-emerald-400">$${c.cobranza.toLocaleString()}</td>
+                </tr>`).join('');
+
+            // Gráficos
+            new Chart(document.getElementById('chartAgencias'), {
+                type: 'bar',
+                data: {
+                    labels: r.porAgencia.map(a => a.agencia),
+                    datasets: [{
+                        label: 'Cobrados',
+                        data: r.porAgencia.map(a => a.cobrados),
+                        backgroundColor: '#10b981',
+                        borderRadius: 4
+                    }, {
+                        label: 'Sin Pago',
+                        data: r.porAgencia.map(a => a.total - a.cobrados),
+                        backgroundColor: '#475569',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true, grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 } }},
+                        y: { stacked: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' }}
+                    },
+                    plugins: { legend: { display: false }}
+                }
+            });
+
+            new Chart(document.getElementById('chartDona'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['MORA sin pago', 'MORA cobrado', 'VIGENTE sin pago', 'VIGENTE cobrado'],
+                    datasets: [{
+                        data: [
+                            r.mora.total - r.mora.cobrados,
+                            r.mora.cobrados,
+                            r.vigente.total - r.vigente.cobrados,
+                            r.vigente.cobrados
+                        ],
+                        backgroundColor: ['#78350f', '#f59e0b', '#4c1d95', '#8b5cf6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 9 }, padding: 6 }}}
+                }
+            });
+        }
+    </script>
+</body>
+</html>

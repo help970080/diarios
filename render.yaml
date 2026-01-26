@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: cobranza-promocash
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    disk:
+      name: data
+      mountPath: /opt/render/project/src
+      sizeGB: 1
