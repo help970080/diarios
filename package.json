@@ -1,6 +1,7 @@
 {
   "name": "cobranza-promocash",
   "version": "1.0.0",
+  "description": "Procesador de Cobranza Promocash",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
